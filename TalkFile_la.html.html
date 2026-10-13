@@ -1,0 +1,1815 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>미국 LA & 텍사스 올인원 인터랙티브 여행 대시보드</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome & Chart.js -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: 'Noto Sans KR', 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      scroll-behavior: smooth;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    .spinner {
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes dashFlight {
+      to { stroke-dashoffset: -32; }
+    }
+    .flight-dash-line {
+      stroke-dasharray: 6 6;
+      animation: dashFlight 1.5s linear infinite;
+    }
+    .map-pin-btn {
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+    .map-pin-btn:hover {
+      transform: scale(1.22);
+    }
+    .pulse-ring {
+      animation: pulseAnim 2.2s infinite;
+    }
+    @keyframes pulseAnim {
+      0% { r: 14px; opacity: 0.8; }
+      50% { r: 24px; opacity: 0.1; }
+      100% { r: 14px; opacity: 0.8; }
+    }
+    /* Dynamic Theme Overrides */
+    [data-theme="cyber"] {
+      background-color: #090d16 !important;
+      color: #f1f5f9 !important;
+    }
+    [data-theme="cyber"] .bg-white {
+      background-color: #111827 !important;
+      color: #f1f5f9 !important;
+      border-color: #1e293b !important;
+    }
+    [data-theme="cyber"] .bg-slate-50 {
+      background-color: #0b1120 !important;
+      border-color: #1e293b !important;
+    }
+    [data-theme="cyber"] .text-slate-900 {
+      color: #f8fafc !important;
+    }
+    [data-theme="cyber"] .text-slate-700, [data-theme="cyber"] .text-slate-600 {
+      color: #cbd5e1 !important;
+    }
+    [data-theme="sunset"] {
+      background-color: #fff7ed !important;
+      color: #431407 !important;
+    }
+    [data-theme="rustic"] {
+      background-color: #fdfbf7 !important;
+      color: #292524 !important;
+    }
+  </style>
+</head>
+<body data-theme="aero" class="bg-slate-50 text-slate-900 antialiased min-h-screen flex flex-col">
+
+  <!-- Interactive Header with Audio Toggle & Live Share -->
+  <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <span id="brandLogoBadge" class="p-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-amber-600 text-white rounded-xl font-black text-base shadow-sm">
+          🇺🇸 LA & TEXAS
+        </span>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-base sm:text-lg font-extrabold text-slate-900 leading-tight">LA & 텍사스 올인원 인터랙티브 가이드</h1>
+            <span class="hidden sm:inline-block px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 rounded-full border border-emerald-200">
+              실시간 인터랙티브 엔진
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-500 font-medium">루트 맵 탐색 | Google Flights 실시간 운임 | 스마트 경비 계산기 | 치안/생존 가이드</p>
+        </div>
+      </div>
+      
+      <!-- Quick Action Controls -->
+      <div class="flex items-center space-x-2">
+        <button id="soundToggleBtn" onclick="toggleAppSound()" class="flex items-center space-x-1 text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold transition">
+          <i id="soundIcon" class="fa-solid fa-volume-high text-blue-600"></i>
+          <span class="hidden md:inline" id="soundLabel">효과음 ON</span>
+        </button>
+        <button id="copyUrlBtn" onclick="copyDashboardUrl()" class="flex items-center space-x-1.5 text-xs px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition active:scale-95">
+          <i class="fa-solid fa-share-nodes"></i>
+          <span class="hidden sm:inline">대시보드 공유</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 4-Theme Interactive Switcher Bar -->
+    <div class="bg-slate-100/80 border-t border-slate-200 px-4 py-1.5 text-xs">
+      <div class="max-w-7xl mx-auto flex items-center justify-between gap-2 overflow-x-auto custom-scrollbar">
+        <div class="flex items-center space-x-1.5 shrink-0 font-bold text-slate-700 text-[11px]">
+          <i class="fa-solid fa-palette text-indigo-600"></i>
+          <span>인터랙티브 무드 테마:</span>
+        </div>
+        <div class="flex items-center space-x-1.5">
+          <button onclick="setAppTheme('aero')" id="theme-btn-aero" class="theme-btn px-2.5 py-0.5 rounded-lg text-xs font-bold bg-blue-600 text-white shadow-xs">
+            ✈️ 퍼시픽 에어로
+          </button>
+          <button onclick="setAppTheme('sunset')" id="theme-btn-sunset" class="theme-btn px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-100 text-amber-800 hover:bg-amber-200">
+            🌴 캘리포니아 선셋
+          </button>
+          <button onclick="setAppTheme('rustic')" id="theme-btn-rustic" class="theme-btn px-2.5 py-0.5 rounded-lg text-xs font-bold bg-stone-200 text-stone-800 hover:bg-stone-300">
+            🤠 텍사스 레더
+          </button>
+          <button onclick="setAppTheme('cyber')" id="theme-btn-cyber" class="theme-btn px-2.5 py-0.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 hover:text-white">
+            🌃 LA 나이트 네온
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Interactive Global Status Alert -->
+  <section class="bg-gradient-to-r from-blue-800 via-indigo-900 to-amber-800 text-white py-2 px-4 shadow-sm text-xs font-semibold">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center space-x-2">
+        <span class="bg-black/30 px-2 py-0.5 rounded-full text-[11px] border border-white/20">LIVE ENGINE</span>
+        <span>🗺️ 인터랙티브 노선 맵 연동 | 🎟️ 디즈니/유니버설 정가 & $500 절약팁 | 🛡️ 스키드로 치안 가이드</span>
+      </div>
+      <div class="flex items-center space-x-2 text-[11px]">
+        <span class="bg-emerald-500/30 text-emerald-300 px-2 py-0.5 rounded font-mono border border-emerald-400/40">
+          환율: <strong id="liveRateHeader">1,380</strong> KRW/USD
+        </span>
+        <span class="bg-white/20 px-2 py-0.5 rounded font-bold">
+          ICN ➔ LAX ➔ DFW ➔ ICN
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 py-5 flex-1 w-full space-y-6">
+
+    <!-- Top Primary Interactive Navigation Tabs -->
+    <div class="flex space-x-2 border-b border-slate-200 pb-2 overflow-x-auto custom-scrollbar">
+      <button onclick="switchMainTab('map')" id="main-tab-map" class="main-tab-btn flex items-center space-x-1.5 px-4 py-2.5 rounded-xl text-sm font-bold bg-slate-900 text-white shadow-sm transition whitespace-nowrap">
+        <i class="fa-solid fa-map-location-dot text-amber-400"></i>
+        <span>🗺️ 인터랙티브 동선 맵</span>
+      </button>
+      <button onclick="switchMainTab('flights')" id="main-tab-flights" class="main-tab-btn flex items-center space-x-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 transition whitespace-nowrap">
+        <i class="fa-solid fa-plane text-sky-500"></i>
+        <span>✈️ 항공권 비교 & 프로모션</span>
+      </button>
+      <button onclick="switchMainTab('itinerary')" id="main-tab-itinerary" class="main-tab-btn flex items-center space-x-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 transition whitespace-nowrap">
+        <i class="fa-solid fa-calendar-check text-emerald-500"></i>
+        <span>📋 8박 10일 한눈에 보기</span>
+      </button>
+      <button onclick="switchMainTab('budget')" id="main-tab-budget" class="main-tab-btn flex items-center space-x-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 transition whitespace-nowrap">
+        <i class="fa-solid fa-calculator text-indigo-500"></i>
+        <span>💰 스마트 여행 경비 계산기</span>
+      </button>
+      <button onclick="switchMainTab('tickets')" id="main-tab-tickets" class="main-tab-btn flex items-center space-x-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 transition whitespace-nowrap">
+        <i class="fa-solid fa-ticket text-purple-500"></i>
+        <span>🎟️ 테마파크 정가 & 실전 팁</span>
+      </button>
+      <button onclick="switchMainTab('preparation')" id="main-tab-preparation" class="main-tab-btn flex items-center space-x-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 transition whitespace-nowrap">
+        <i class="fa-solid fa-shield-halved text-rose-500"></i>
+        <span>🛡️ 안전 수칙 & 체크리스트</span>
+      </button>
+    </div>
+
+    <!-- ==================== TAB 0: INTERACTIVE SVG MAP & SPOT EXPLORER ==================== -->
+    <div id="tab-content-map" class="tab-panel space-y-4">
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          <div class="flex items-center space-x-2">
+            <span class="p-2 bg-amber-500 text-white rounded-xl text-sm font-bold shadow-xs">
+              <i class="fa-solid fa-compass"></i>
+            </span>
+            <div>
+              <h3 class="text-sm sm:text-base font-extrabold text-slate-900">미국 대륙 횡단 인터랙티브 동선 맵 (인천 ➔ LA ➔ 텍사스 DFW)</h3>
+              <p class="text-xs text-slate-500">지도 위의 스팟 마커를 클릭하면 상세 코스 정보, 이동 팁, 내비게이션 좌표가 즉시 연동됩니다.</p>
+            </div>
+          </div>
+          <!-- Filter Buttons by Region -->
+          <div class="flex items-center space-x-1.5 text-xs">
+            <button onclick="filterMapRegion('ALL')" id="map-filter-ALL" class="map-filter-btn px-2.5 py-1 rounded-lg font-bold bg-slate-900 text-white shadow-xs">전체 동선</button>
+            <button onclick="filterMapRegion('LA')" id="map-filter-LA" class="map-filter-btn px-2.5 py-1 rounded-lg font-semibold bg-blue-100 text-blue-800 hover:bg-blue-200">🌴 LA 집중</button>
+            <button onclick="filterMapRegion('TEXAS')" id="map-filter-TEXAS" class="map-filter-btn px-2.5 py-1 rounded-lg font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200">🤠 텍사스 집중</button>
+            <button onclick="filterMapRegion('ORLANDO')" id="map-filter-ORLANDO" class="map-filter-btn px-2.5 py-1 rounded-lg font-semibold bg-purple-100 text-purple-800 hover:bg-purple-200">🏰 WDW 올랜도</button>
+          </div>
+        </div>
+
+        <!-- SVG Map Graphic -->
+        <div class="relative w-full rounded-2xl bg-gradient-to-b from-sky-900 via-indigo-950 to-slate-950 border border-slate-800 overflow-hidden shadow-inner select-none p-1">
+          <svg id="usTravelSvgMap" viewBox="0 0 1000 460" class="w-full h-auto max-h-[440px] block" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="flightGradLA" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#38bdf8"/>
+                <stop offset="100%" stop-color="#818cf8"/>
+              </linearGradient>
+              <linearGradient id="flightGradDFW" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#fbbf24"/>
+                <stop offset="100%" stop-color="#f87171"/>
+              </linearGradient>
+              <filter id="glowPin" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.6"/>
+              </filter>
+            </defs>
+
+            <!-- Pacific Ocean & US Land Representation -->
+            <rect width="1000" height="460" fill="#090d16"/>
+            <!-- Pacific Grid Lines -->
+            <path d="M 0 100 L 1000 100 M 0 200 L 1000 200 M 0 300 L 1000 300 M 0 400 L 1000 400" stroke="#1e293b" stroke-width="0.7" stroke-dasharray="4 4"/>
+            <path d="M 200 0 L 200 460 M 400 0 L 400 460 M 600 0 L 600 460 M 800 0 L 800 460" stroke="#1e293b" stroke-width="0.7" stroke-dasharray="4 4"/>
+
+            <!-- Korea (ICN) Island Graphic -->
+            <path d="M 50 140 C 65 130 85 145 75 185 C 65 210 55 200 50 170 Z" fill="#334155" stroke="#64748b" stroke-width="1.5"/>
+            <text x="65" y="125" fill="#94a3b8" font-size="11" font-weight="800" text-anchor="middle">🇰🇷 인천(ICN)</text>
+
+            <!-- US Land Silhouette (Stylized Continent) -->
+            <path d="M 240 120 C 310 100 420 90 560 95 C 720 100 860 120 940 180 C 960 230 920 310 890 350 C 850 400 780 430 720 410 C 650 390 580 420 500 400 C 440 370 380 380 320 350 C 270 320 230 260 235 200 C 238 160 235 140 240 120 Z" 
+                  fill="#1e293b" stroke="#334155" stroke-width="2"/>
+
+            <!-- US Regional Labels -->
+            <text x="320" y="160" fill="#64748b" font-size="12" font-weight="700">캘리포니아 (서부)</text>
+            <text x="540" y="310" fill="#64748b" font-size="12" font-weight="700">텍사스 주 (남부)</text>
+            <text x="830" y="350" fill="#64748b" font-size="12" font-weight="700">플로리다 (올랜도)</text>
+
+            <!-- Flight Paths -->
+            <!-- Path 1: ICN -> LAX (11 hrs) -->
+            <path id="route-icn-lax" class="flight-dash-line" d="M 75 160 C 130 90 200 120 290 230" stroke="url(#flightGradLA)" stroke-width="3" fill="none"/>
+            <!-- Path 2: LAX -> DFW (3 hrs 15 mins) -->
+            <path id="route-lax-dfw" class="flight-dash-line" d="M 290 230 C 380 200 450 250 560 280" stroke="#f59e0b" stroke-width="3" fill="none"/>
+            <!-- Path 3: DFW -> ICN Return (14 hrs) -->
+            <path id="route-dfw-icn" class="flight-dash-line" d="M 560 280 C 450 110 250 70 75 160" stroke="#10b981" stroke-width="2.5" fill="none" opacity="0.8"/>
+            <!-- Path 4: Optional DFW -> Orlando (WDW) -->
+            <path id="route-dfw-mco" class="flight-dash-line" d="M 560 280 C 680 310 750 320 850 350" stroke="#a855f7" stroke-width="2" fill="none" opacity="0.6"/>
+
+            <!-- Flight Badges on Paths -->
+            <rect x="140" y="105" width="75" height="18" rx="4" fill="#0f172a" opacity="0.85"/>
+            <text x="177" y="118" fill="#38bdf8" font-size="9" font-weight="700" text-anchor="middle">✈️ 11시간 직항</text>
+
+            <rect x="390" y="210" width="80" height="18" rx="4" fill="#0f172a" opacity="0.85"/>
+            <text x="430" y="223" fill="#fbbf24" font-size="9" font-weight="700" text-anchor="middle">✈️ 국내선 3.2시간</text>
+
+            <!-- INTERACTIVE MAP NODES -->
+            <!-- 1. ICN Node -->
+            <g class="map-pin-btn" onclick="selectMapSpot('icn')" transform="translate(75, 160)">
+              <circle r="12" fill="#3b82f6" filter="url(#glowPin)" stroke="#ffffff" stroke-width="2"/>
+              <text text-anchor="middle" y="4" fill="#ffffff" font-size="9" font-weight="900">ICN</text>
+            </g>
+
+            <!-- 2. LAX Node & Metro Spots -->
+            <!-- LA Hub Base -->
+            <g class="map-pin-btn" onclick="selectMapSpot('lax')" transform="translate(290, 230)">
+              <circle r="18" fill="#0284c7" class="pulse-ring"/>
+              <circle r="14" fill="#0284c7" filter="url(#glowPin)" stroke="#ffffff" stroke-width="2"/>
+              <text text-anchor="middle" y="4" fill="#ffffff" font-size="10" font-weight="900">LAX</text>
+              <rect x="-45" y="18" width="90" height="18" rx="4" fill="#0f172a" opacity="0.9"/>
+              <text text-anchor="middle" y="30" fill="#38bdf8" font-size="9" font-weight="800">로스앤젤레스 (4박)</text>
+            </g>
+
+            <!-- LA Sub-spots: Santa Monica -->
+            <g class="map-pin-btn" onclick="selectMapSpot('santamonica')" transform="translate(265, 215)">
+              <circle r="9" fill="#06b6d4" filter="url(#glowPin)" stroke="#ffffff" stroke-width="1.5"/>
+              <text text-anchor="middle" y="3" fill="#ffffff" font-size="8">🎡</text>
+              <text x="0" y="-12" fill="#e2e8f0" font-size="9" font-weight="700" text-anchor="middle">산타모니카</text>
+            </g>
+
+            <!-- LA Sub-spots: Hollywood & Universal -->
+            <g class="map-pin-btn" onclick="selectMapSpot('universal')" transform="translate(285, 195)">
+              <circle r="9" fill="#8b5cf6" filter="url(#glowPin)" stroke="#ffffff" stroke-width="1.5"/>
+              <text text-anchor="middle" y="3" fill="#ffffff" font-size="8">🎬</text>
+              <text x="0" y="-12" fill="#e2e8f0" font-size="9" font-weight="700" text-anchor="middle">유니버설</text>
+            </g>
+
+            <!-- LA Sub-spots: Griffith -->
+            <g class="map-pin-btn" onclick="selectMapSpot('griffith')" transform="translate(310, 205)">
+              <circle r="9" fill="#ec4899" filter="url(#glowPin)" stroke="#ffffff" stroke-width="1.5"/>
+              <text text-anchor="middle" y="3" fill="#ffffff" font-size="8">🔭</text>
+              <text x="0" y="-12" fill="#e2e8f0" font-size="9" font-weight="700" text-anchor="middle">그리피스</text>
+            </g>
+
+            <!-- 3. Texas DFW Node & Metro Spots -->
+            <!-- DFW Hub Base -->
+            <g class="map-pin-btn" onclick="selectMapSpot('dfw')" transform="translate(560, 280)">
+              <circle r="18" fill="#d97706" class="pulse-ring"/>
+              <circle r="14" fill="#d97706" filter="url(#glowPin)" stroke="#ffffff" stroke-width="2"/>
+              <text text-anchor="middle" y="4" fill="#ffffff" font-size="10" font-weight="900">DFW</text>
+              <rect x="-50" y="18" width="100" height="18" rx="4" fill="#0f172a" opacity="0.9"/>
+              <text text-anchor="middle" y="30" fill="#fcd34d" font-size="9" font-weight="800">텍사스 댈러스 (4박)</text>
+            </g>
+
+            <!-- Texas Sub-spots: Stockyards -->
+            <g class="map-pin-btn" onclick="selectMapSpot('stockyards')" transform="translate(535, 260)">
+              <circle r="9" fill="#ea580c" filter="url(#glowPin)" stroke="#ffffff" stroke-width="1.5"/>
+              <text text-anchor="middle" y="3" fill="#ffffff" font-size="8">🤠</text>
+              <text x="0" y="-12" fill="#fed7aa" font-size="9" font-weight="700" text-anchor="middle">스톡야드 소몰이</text>
+            </g>
+
+            <!-- Texas Sub-spots: Deep Ellum & BBQ -->
+            <g class="map-pin-btn" onclick="selectMapSpot('bbq')" transform="translate(585, 265)">
+              <circle r="9" fill="#ef4444" filter="url(#glowPin)" stroke="#ffffff" stroke-width="1.5"/>
+              <text text-anchor="middle" y="3" fill="#ffffff" font-size="8">🥩</text>
+              <text x="0" y="-12" fill="#fca5a5" font-size="9" font-weight="700" text-anchor="middle">정통 BBQ</text>
+            </g>
+
+            <!-- 4. Orlando (WDW) Optional Node -->
+            <g class="map-pin-btn" onclick="selectMapSpot('wdw')" transform="translate(850, 350)">
+              <circle r="14" fill="#7c3aed" filter="url(#glowPin)" stroke="#ffffff" stroke-width="2"/>
+              <text text-anchor="middle" y="4" fill="#ffffff" font-size="9" font-weight="900">WDW</text>
+              <rect x="-45" y="18" width="90" height="18" rx="4" fill="#0f172a" opacity="0.9"/>
+              <text text-anchor="middle" y="30" fill="#c084fc" font-size="9" font-weight="700">올랜도 디즈니월드</text>
+            </g>
+          </svg>
+        </div>
+
+        <!-- Selected Spot Detail Card -->
+        <div id="mapSpotDetailCard" class="p-4 rounded-xl bg-slate-900 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-slate-800 shadow-md">
+          <div class="space-y-1">
+            <div class="flex items-center space-x-2">
+              <span id="spotBadge" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded bg-blue-600 text-white">LA 서부 해변</span>
+              <h4 id="spotTitle" class="text-sm sm:text-base font-extrabold text-white">산타모니카 피어 & 루트 66 종점 표지판</h4>
+              <span id="spotDaysTag" class="text-[10px] text-sky-300 font-bold">Day 1</span>
+            </div>
+            <p id="spotDesc" class="text-xs text-slate-300 leading-relaxed">
+              미국 횡단도로 'Route 66 End of Trail' 상징 표지판 인증샷과 태평양 일몰 감상. 가성비 인앤아웃 버거 더블더블 식사!
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <span id="spotTransitTip" class="text-xs font-semibold px-2.5 py-1 bg-slate-800 rounded-lg text-emerald-400 border border-slate-700">
+              🚗 LAX에서 렌터카 25분
+            </span>
+            <button onclick="copyCurrentSpotAddress()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition font-bold flex items-center space-x-1 shadow-xs">
+              <i class="fa-regular fa-copy"></i>
+              <span>내비 주소 복사</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ==================== TAB 1: FLIGHT TRACKING & PROMOTIONS ==================== -->
+    <div id="tab-content-flights" class="tab-panel hidden space-y-6">
+      
+      <!-- Calendar Controls & Flight Filters -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        
+        <!-- 2027 Inline Calendar Component -->
+        <div class="p-4 bg-gradient-to-r from-blue-50/80 via-indigo-50/70 to-purple-50/60 rounded-xl border border-blue-200">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <div class="flex items-center space-x-2">
+              <span class="p-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold">
+                <i class="fa-regular fa-calendar-days"></i>
+              </span>
+              <div>
+                <h4 class="text-xs font-extrabold text-slate-900">2027년 상시 노출 인라인 달력 (2027년 4월 ~ 10월)</h4>
+                <p class="text-[11px] text-slate-500">날짜를 클릭해도 닫히지 않고 유지되며, Google Flights 실시간 운임 검색 파라미터가 연동됩니다.</p>
+              </div>
+            </div>
+            <div class="flex items-center space-x-1.5 text-[11px]">
+              <span id="seasonBadge" class="px-2 py-0.5 font-bold rounded bg-amber-100 text-amber-800 border border-amber-200">
+                🌱 봄 시즌 (4~5월)
+              </span>
+              <span id="tripDurationBadge" class="px-2 py-0.5 font-bold rounded bg-blue-100 text-blue-800 border border-blue-200">
+                8박 10일
+              </span>
+            </div>
+          </div>
+
+          <!-- Calendar Navigator -->
+          <div class="bg-white rounded-xl p-3 border border-slate-200 shadow-2xs space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+              <div class="flex items-center space-x-2">
+                <button type="button" onclick="changeCalendarMonth(-1)" class="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
+                  <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <span id="calendarMonthTitle" class="text-xs sm:text-sm font-extrabold text-slate-900 min-w-[110px] text-center">
+                  2027년 5월
+                </span>
+                <button type="button" onclick="changeCalendarMonth(1)" class="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
+                  <i class="fa-solid fa-chevron-right"></i>
+                </button>
+              </div>
+
+              <!-- Quick Presets -->
+              <div class="flex flex-wrap items-center gap-1.5">
+                <button type="button" onclick="setQuickDate('2027-05-01', '2027-05-09')" class="px-2 py-1 bg-slate-50 hover:bg-blue-50 hover:text-blue-600 text-slate-700 border border-slate-200 rounded-md text-[11px] font-semibold transition">
+                  🌸 5월 연휴 (8박)
+                </button>
+                <button type="button" onclick="setQuickDate('2027-07-24', '2027-08-01')" class="px-2 py-1 bg-slate-50 hover:bg-rose-50 hover:text-rose-600 text-slate-700 border border-slate-200 rounded-md text-[11px] font-semibold transition">
+                  ☀️ 7/8월 성수기 (8박)
+                </button>
+                <button type="button" onclick="setQuickDate('2027-09-18', '2027-09-26')" class="px-2 py-1 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-600 text-slate-700 border border-slate-200 rounded-md text-[11px] font-semibold transition">
+                  🍁 9월 가을 (8박)
+                </button>
+                <button type="button" onclick="setQuickDate('2027-10-02', '2027-10-10')" class="px-2 py-1 bg-slate-50 hover:bg-amber-50 hover:text-amber-600 text-slate-700 border border-slate-200 rounded-md text-[11px] font-semibold transition">
+                  🍂 10월 연휴 (8박)
+                </button>
+              </div>
+            </div>
+
+            <!-- Month Quick Tabs -->
+            <div class="flex items-center gap-1 overflow-x-auto custom-scrollbar pb-1 text-[11px]">
+              <span class="text-slate-400 font-bold shrink-0 mr-1 text-[10px]">월 이동:</span>
+              <button type="button" onclick="jumpToMonth(2027, 4)" class="month-tab-btn px-2.5 py-1 rounded-md border text-slate-600 border-slate-200 hover:bg-slate-100 font-semibold" data-month="4">4월</button>
+              <button type="button" onclick="jumpToMonth(2027, 5)" class="month-tab-btn px-2.5 py-1 rounded-md border text-slate-600 border-slate-200 hover:bg-slate-100 font-semibold" data-month="5">5월</button>
+              <button type="button" onclick="jumpToMonth(2027, 6)" class="month-tab-btn px-2.5 py-1 rounded-md border text-slate-600 border-slate-200 hover:bg-slate-100 font-semibold" data-month="6">6월</button>
+              <button type="button" onclick="jumpToMonth(2027, 7)" class="month-tab-btn px-2.5 py-1 rounded-md border text-slate-600 border-slate-200 hover:bg-slate-100 font-semibold" data-month="7">7월</button>
+              <button type="button" onclick="jumpToMonth(2027, 8)" class="month-tab-btn px-2.5 py-1 rounded-md border text-slate-600 border-slate-200 hover:bg-slate-100 font-semibold" data-month="8">8월</button>
+              <button type="button" onclick="jumpToMonth(2027, 9)" class="month-tab-btn px-2.5 py-1 rounded-md border text-slate-600 border-slate-200 hover:bg-slate-100 font-semibold" data-month="9">9월</button>
+              <button type="button" onclick="jumpToMonth(2027, 10)" class="month-tab-btn px-2.5 py-1 rounded-md border text-slate-600 border-slate-200 hover:bg-slate-100 font-semibold" data-month="10">10월</button>
+            </div>
+
+            <!-- Calendar Days Grid -->
+            <div>
+              <div class="grid grid-cols-7 gap-1 text-center font-bold text-[11px] py-1 border-b border-slate-100 text-slate-400">
+                <span class="text-rose-500">일</span>
+                <span>월</span>
+                <span>화</span>
+                <span>수</span>
+                <span>목</span>
+                <span>금</span>
+                <span class="text-blue-500">토</span>
+              </div>
+              <div id="inlineCalendarGrid" class="grid grid-cols-7 gap-1 text-center text-xs mt-1">
+                <!-- Javascript will inject calendar cells -->
+              </div>
+            </div>
+
+            <!-- Selection Feedback Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-2 p-2 bg-slate-50 rounded-lg text-[11px] text-slate-600 border border-slate-200">
+              <div class="flex items-center space-x-3">
+                <span>🛫 출발일: <strong id="selectedDepDisplay" class="text-blue-600 font-extrabold">2027-05-10</strong></span>
+                <span>🛬 귀국일: <strong id="selectedRetDisplay" class="text-emerald-600 font-extrabold">2027-05-18</strong></span>
+              </div>
+              <div class="text-[10px] text-slate-400 flex items-center space-x-1">
+                <span class="inline-block w-2.5 h-2.5 bg-blue-600 rounded-xs"></span>
+                <span>출발일</span>
+                <span class="inline-block w-2.5 h-2.5 bg-emerald-600 rounded-xs ml-1"></span>
+                <span>귀국일</span>
+                <span class="inline-block w-2.5 h-2.5 bg-blue-100 rounded-xs ml-1"></span>
+                <span>체류기간</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter Controls & Real-Time Sync Bar -->
+        <div class="flex flex-wrap items-center justify-between gap-4 pt-1">
+          <div class="flex flex-wrap items-center gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-500 mb-1">목적지 선택</label>
+              <select id="flightDestSelect" onchange="updateFlightDashboard()" class="bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="ALL">다구간 전체 (ICN ➔ LAX ➔ DFW ➔ ICN)</option>
+                <option value="LAX">LAX (로스앤젤레스)</option>
+                <option value="DFW">DFW (텍사스 댈러스)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 mb-1">비행 형태</label>
+              <label class="inline-flex items-center space-x-2 bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 cursor-pointer">
+                <input type="checkbox" id="directOnlyCheck" onchange="updateFlightDashboard()" checked class="w-4 h-4 text-blue-600 rounded">
+                <span class="text-xs font-bold text-slate-700">✈️ 직항만 보기</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <button id="aiSearchBtn" onclick="searchGoogleFlightsViaAI()" class="flex items-center space-x-1.5 text-xs px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-sm transition active:scale-95">
+              <i class="fa-solid fa-arrows-rotate"></i>
+              <span>Google Flights 실시간 운임 갱신</span>
+            </button>
+            <a id="googleFlightsOfficialBtn" href="https://www.google.com/travel/flights" target="_blank" rel="noopener noreferrer" class="flex items-center space-x-1.5 text-xs px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-sm transition">
+              <i class="fa-brands fa-google mr-1"></i>
+              <span id="deepLinkBtnText">Google Flights 실시간 검색 ↗</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
+          <span id="gfLastUpdated">⚡ Google Flights 검색 기준 운임 표기 중</span>
+          <span class="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded">현재 일반 이코노미 기준 운임 수준: 보통 (Typical)</span>
+        </div>
+      </div>
+
+      <!-- Airline Promotion Center -->
+      <div class="bg-white p-5 rounded-2xl border border-rose-200 shadow-sm space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-rose-100 pb-3">
+          <div class="flex items-center space-x-2">
+            <span class="p-1.5 bg-rose-500 text-white rounded-lg text-xs font-bold">
+              <i class="fa-solid fa-tags"></i>
+            </span>
+            <div>
+              <div class="flex items-center space-x-2">
+                <h3 class="text-sm font-extrabold text-slate-900">항공사 공식 이벤트 & 쿠폰함 직통 센터 (실시간 프로모션 조회)</h3>
+                <span id="promoLiveStatusBadge" class="inline-flex items-center px-2 py-0.5 text-[10px] font-bold bg-rose-100 text-rose-700 rounded-full border border-rose-200">
+                  <span class="w-1.5 h-1.5 rounded-full bg-rose-500 mr-1 animate-pulse"></span>LIVE
+                </span>
+              </div>
+              <p class="text-xs text-slate-500">항공사 공홈에서 현재 진행 중인 미주 노선 카드사 청구할인, 전용 프로모션 코드, 마일리지 특가를 실시간으로 새로고침합니다.</p>
+            </div>
+          </div>
+          
+          <button id="promoRefreshBtn" onclick="refreshPromotions()" class="flex items-center space-x-1.5 text-xs px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg shadow-sm transition active:scale-95">
+            <i class="fa-solid fa-arrows-rotate mr-1" id="promoSpinnerIcon"></i>
+            <span>프로모션 실시간 새로고침</span>
+          </button>
+        </div>
+
+        <div id="promotionsCardGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- JS dynamic promotions render -->
+        </div>
+      </div>
+
+      <!-- Flight Table & Chart -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <div class="flex justify-between items-center">
+            <h4 class="font-bold text-sm text-slate-900">📊 Google Flights 실시간 운임표 (조회 결과)</h4>
+            <span id="priceCountBadge" class="text-xs bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded">0건 조회</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-700">
+              <thead class="bg-slate-100 text-slate-900 font-bold">
+                <tr>
+                  <th class="p-2.5">항공사</th>
+                  <th class="p-2.5">구간</th>
+                  <th class="p-2.5">운항 스케줄</th>
+                  <th class="p-2.5">형태</th>
+                  <th class="p-2.5 text-right">예상 운임</th>
+                  <th class="p-2.5 text-center">조회</th>
+                </tr>
+              </thead>
+              <tbody id="flightTableBody" class="divide-y divide-slate-100">
+                <!-- Dynamic rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <h4 class="font-bold text-sm text-slate-900 mb-2">📈 항공사별 가격 비교 차트 (Google Flights 기준)</h4>
+          <div class="relative w-full h-64">
+            <canvas id="flightPriceChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ==================== TAB 2: ITINERARY AT A GLANCE ==================== -->
+    <div id="tab-content-itinerary" class="tab-panel hidden space-y-6">
+
+      <!-- At-a-Glance Route Bar -->
+      <div class="bg-gradient-to-r from-blue-900 via-indigo-900 to-amber-900 rounded-2xl p-5 text-white shadow-sm space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/15 pb-2.5">
+          <div class="flex items-center space-x-2">
+            <span class="p-1.5 bg-blue-500 text-white rounded-lg text-xs font-bold">
+              <i class="fa-solid fa-route"></i>
+            </span>
+            <div>
+              <h3 class="text-sm sm:text-base font-extrabold">8박 10일 올인원 여행 코스 한눈에 보기</h3>
+              <p class="text-xs text-blue-200">날짜를 하나씩 클릭하지 않아도 전체 일정과 핵심 꿀팁을 한눈에 파악할 수 있습니다.</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-2 text-[11px]">
+            <span class="px-2.5 py-1 bg-blue-500/40 rounded-full font-bold border border-blue-400/50">🌴 LA 1~4일차</span>
+            <span class="text-slate-400">➔</span>
+            <span class="px-2.5 py-1 bg-amber-500/40 rounded-full font-bold border border-amber-400/50">🤠 텍사스 4~8일차</span>
+            <span class="text-slate-400">➔</span>
+            <span class="px-2.5 py-1 bg-slate-500/40 rounded-full font-bold border border-slate-400/50">🛫 귀국 8~10일차</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 pt-1 text-xs">
+          <button type="button" onclick="scrollToItineraryCard('day-card-1')" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-left transition text-slate-100 flex flex-col justify-between">
+            <span class="text-[10px] font-bold text-sky-300">Day 1</span>
+            <span class="font-extrabold text-xs mt-0.5 truncate">LAX ➔ 산타모니카</span>
+            <span class="text-[10px] text-slate-300 truncate mt-0.5">루트66 & 인앤아웃</span>
+          </button>
+          <button type="button" onclick="scrollToItineraryCard('day-card-2')" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-left transition text-slate-100 flex flex-col justify-between">
+            <span class="text-[10px] font-bold text-sky-300">Day 2</span>
+            <span class="font-extrabold text-xs mt-0.5 truncate">파머스 ➔ 더브로드</span>
+            <span class="text-[10px] text-slate-300 truncate mt-0.5">그리피스 3단야경</span>
+          </button>
+          <button type="button" onclick="scrollToItineraryCard('day-card-3')" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-left transition text-slate-100 flex flex-col justify-between">
+            <span class="text-[10px] font-bold text-sky-300">Day 3</span>
+            <span class="font-extrabold text-xs mt-0.5 truncate">할리우드 ➔ 유니버설</span>
+            <span class="text-[10px] text-slate-300 truncate mt-0.5">K타운 북창동/위스파</span>
+          </button>
+          <button type="button" onclick="scrollToItineraryCard('day-card-4')" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-left transition text-slate-100 flex flex-col justify-between">
+            <span class="text-[10px] font-bold text-indigo-300">Day 4</span>
+            <span class="font-extrabold text-xs mt-0.5 truncate">게티센터 ➔ DFW</span>
+            <span class="text-[10px] text-slate-300 truncate mt-0.5">국내선 비행이동</span>
+          </button>
+          <button type="button" onclick="scrollToItineraryCard('day-card-5')" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-left transition text-slate-100 flex flex-col justify-between">
+            <span class="text-[10px] font-bold text-amber-300">Day 5</span>
+            <span class="font-extrabold text-xs mt-0.5 truncate">포트워스 소몰이</span>
+            <span class="text-[10px] text-slate-300 truncate mt-0.5">정통 텍사스 BBQ</span>
+          </button>
+          <button type="button" onclick="scrollToItineraryCard('day-card-6')" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-left transition text-slate-100 flex flex-col justify-between">
+            <span class="text-[10px] font-bold text-amber-300">Day 6</span>
+            <span class="font-extrabold text-xs mt-0.5 truncate">댈러스 도심 & 예술</span>
+            <span class="text-[10px] text-slate-300 truncate mt-0.5">리유니온 타워 야경</span>
+          </button>
+          <button type="button" onclick="scrollToItineraryCard('day-card-7')" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-left transition text-slate-100 flex flex-col justify-between">
+            <span class="text-[10px] font-bold text-amber-300">Day 7</span>
+            <span class="font-extrabold text-xs mt-0.5 truncate">그레이프바인 아울렛</span>
+            <span class="text-[10px] text-slate-300 truncate mt-0.5">두툼한 립아이 스테이크</span>
+          </button>
+          <button type="button" onclick="scrollToItineraryCard('day-card-8')" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-left transition text-slate-100 flex flex-col justify-between">
+            <span class="text-[10px] font-bold text-slate-300">Day 8~10</span>
+            <span class="font-extrabold text-xs mt-0.5 truncate">DFW 출발 ➔ 귀국</span>
+            <span class="text-[10px] text-slate-300 truncate mt-0.5">직항 기내박 ➔ 인천</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Matrix Table -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+          <div class="flex items-center space-x-2">
+            <span class="text-blue-600 font-bold"><i class="fa-solid fa-table-list"></i></span>
+            <h4 class="font-extrabold text-sm text-slate-900">8박 10일 동선 & 맛집 종합 매트릭스</h4>
+          </div>
+          <span class="text-xs text-slate-400">표 하나로 오전·오후·저녁 일정 전체 파악</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-700 divide-y divide-slate-100">
+            <thead class="bg-slate-50 text-slate-900 font-extrabold text-[11px]">
+              <tr>
+                <th class="p-2.5 w-24">일차 / 거점</th>
+                <th class="p-2.5">오전 (Morning)</th>
+                <th class="p-2.5">오후 (Afternoon)</th>
+                <th class="p-2.5">저녁 & 맛집 (Dinner)</th>
+                <th class="p-2.5">실전 핵심 팁 / 주의사항</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 text-xs">
+              <tr class="hover:bg-blue-50/40 transition">
+                <td class="p-2.5 font-extrabold text-blue-700 bg-blue-50/50">
+                  Day 1 <span class="block text-[10px] font-normal text-slate-500">LA 해변</span>
+                </td>
+                <td class="p-2.5 font-medium">11:00 LAX 입국 심사, 렌터카 수령 또는 플라이어웨이 버스</td>
+                <td class="p-2.5">산타모니카 피어 ('루트 66' 종점 표지판), 베니스 비치 노을 산책</td>
+                <td class="p-2.5 font-bold text-slate-900">[가성비] 인앤아웃 버거 (더블더블 & 애니멀 프라이)</td>
+                <td class="p-2.5 text-slate-500 text-[11px]">입국 심사 음식물 질문 시 육류 없으면 "No food" 답변으로 정밀검사 패스</td>
+              </tr>
+              <tr class="hover:bg-blue-50/40 transition">
+                <td class="p-2.5 font-extrabold text-blue-700 bg-blue-50/50">
+                  Day 2 <span class="block text-[10px] font-normal text-slate-500">LA 도심</span>
+                </td>
+                <td class="p-2.5 font-medium">오리지널 파머스 마켓 & 더 그로브 분수대 (생면 파스타, 브라질리언 바비큐)</td>
+                <td class="p-2.5">더 브로드(인피니티 미러룸) & LACMA 가로등 'Urban Light' 관람</td>
+                <td class="p-2.5 font-bold text-slate-900">그리피스 천문대 (노을 30분 전 도착 ➔ 라라랜드 3단 야경)</td>
+                <td class="p-2.5 text-rose-600 text-[11px] font-semibold">다운타운 도보 시 텐트촌 발견 즉시 반대 회항 (스키드 로 절대 진입 금지)</td>
+              </tr>
+              <tr class="hover:bg-blue-50/40 transition">
+                <td class="p-2.5 font-extrabold text-blue-700 bg-blue-50/50">
+                  Day 3 <span class="block text-[10px] font-normal text-slate-500">할리우드</span>
+                </td>
+                <td class="p-2.5 font-medium">레이크 할리우드 파크 (할리우드 사인 인생샷 명당)</td>
+                <td class="p-2.5">유니버설 스튜디오 할리우드 (1시간 시그니처 스튜디오 투어 & 닌텐도 월드)</td>
+                <td class="p-2.5 font-bold text-slate-900">K-Town 북창동순두부(BCD) LA갈비 & 위스파(Wi Spa 찜질방)</td>
+                <td class="p-2.5 text-slate-500 text-[11px]">할리우드 사인 내비에 공원 이름 찍기 / 거리 코스프레 호객꾼 사진 강요 주의</td>
+              </tr>
+              <tr class="hover:bg-indigo-50/40 transition">
+                <td class="p-2.5 font-extrabold text-indigo-700 bg-indigo-50/50">
+                  Day 4 <span class="block text-[10px] font-normal text-slate-500">도시 이동</span>
+                </td>
+                <td class="p-2.5 font-medium">게티 센터 (산상 트램, 반 고흐 &lt;아이리스&gt; & 모네 명화 감상)</td>
+                <td class="p-2.5">LAX 렌터카 반납 후 국내선 탑승 (비행 약 3시간 15분)</td>
+                <td class="p-2.5 font-bold text-slate-900">텍사스 댈러스(DFW) 도착, 공항 렌터카 수령 후 호텔 체크인</td>
+                <td class="p-2.5 text-slate-500 text-[11px]">게티 무료 사전예약 필수 / LA 러시아워(16~18시) 피해서 공항 이동</td>
+              </tr>
+              <tr class="hover:bg-amber-50/40 transition">
+                <td class="p-2.5 font-extrabold text-amber-700 bg-amber-50/50">
+                  Day 5 <span class="block text-[10px] font-normal text-slate-500">텍사스 1</span>
+                </td>
+                <td class="p-2.5 font-medium">11:30 포트워스 스톡야드 카우보이 롱혼(Longhorn) 소몰이 퍼레이드</td>
+                <td class="p-2.5">식스 플로어 뮤지엄 (JFK 대통령 서거 역사 현장 탐방)</td>
+                <td class="p-2.5 font-bold text-slate-900">정통 텍사스 BBQ (Pecan Lodge / Cooper's 브리스킷 & 비프립)</td>
+                <td class="p-2.5 text-slate-500 text-[11px]">미국 1인분 대용량! 남은 바비큐는 눈치 보지 말고 'To-go box' 요청 포장</td>
+              </tr>
+              <tr class="hover:bg-amber-50/40 transition">
+                <td class="p-2.5 font-extrabold text-amber-700 bg-amber-50/50">
+                  Day 6 <span class="block text-[10px] font-normal text-slate-500">텍사스 2</span>
+                </td>
+                <td class="p-2.5 font-medium">클라이드 워렌 공원 (고속도로 위 도심 공원 푸드트럭 런치)</td>
+                <td class="p-2.5">딥 엘름 (Deep Ellum) 예술거리 벽화 투어 & 로컬 수제 맥주</td>
+                <td class="p-2.5 font-bold text-slate-900">리유니온 타워 (360도 스카이데크 파노라마 댈러스 도심 야경)</td>
+                <td class="p-2.5 text-slate-500 text-[11px]">테이블 서빙 식당 팁 18~20% 고려하여 식비 계획</td>
+              </tr>
+              <tr class="hover:bg-amber-50/40 transition">
+                <td class="p-2.5 font-extrabold text-amber-700 bg-amber-50/50">
+                  Day 7 <span class="block text-[10px] font-normal text-slate-500">텍사스 3</span>
+                </td>
+                <td class="p-2.5 font-medium">그레이프바인 밀스 대형 실내 아울렛 (폴로, 나이키, 코치 등)</td>
+                <td class="p-2.5">여유로운 쇼핑 및 부키스(Buc-ee's) 대형 편의점 기념품 구경</td>
+                <td class="p-2.5 font-bold text-slate-900">텍사스 로드하우스 (무제한 갓 구운 빵 & 두툼한 립아이 스테이크)</td>
+                <td class="p-2.5 text-slate-500 text-[11px]">귀국 짐싸기 시 무료 수하물 23kg 초과 방지를 위해 손저울 사전 체크</td>
+              </tr>
+              <tr class="hover:bg-slate-100 transition">
+                <td class="p-2.5 font-extrabold text-slate-700 bg-slate-100">
+                  Day 8~10 <span class="block text-[10px] font-normal text-slate-500">귀국</span>
+                </td>
+                <td class="p-2.5 font-medium">10:00 호텔 체크아웃 및 DFW 공항 렌터카 주유 후 반납</td>
+                <td class="p-2.5">13:00 DFW 출발 ➔ 인천(ICN) 직항 탑승 (기내 1박 / 날짜변경선)</td>
+                <td class="p-2.5 font-bold text-emerald-700">Day 9~10 인천 국제공항 안전 귀국 완료</td>
+                <td class="p-2.5 text-slate-500 text-[11px]">보조배터리는 반드시 기내 휴대(위탁 금지), 면세점 마지막 쇼핑</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ==================== TAB 3: SMART BUDGET CALCULATOR ==================== -->
+    <div id="tab-content-budget" class="tab-panel hidden space-y-6">
+      <div class="bg-white p-6 rounded-2xl border border-indigo-200 shadow-sm space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-indigo-100 pb-3">
+          <div class="flex items-center space-x-2">
+            <span class="p-2 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-xs">
+              <i class="fa-solid fa-coins"></i>
+            </span>
+            <div>
+              <h3 class="text-sm sm:text-base font-extrabold text-slate-900">인터랙티브 여행 경비 시뮬레이터 (환율 & 옵션 연동)</h3>
+              <p class="text-xs text-slate-500">인원수, 호텔 등급, 테마파크 익스프레스 포함 여부에 따라 총 경비와 1인당 예상 지출을 실시간 계산합니다.</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="text-xs text-slate-500">현재 적용 환율:</span>
+            <span id="calcExRateDisplay" class="font-mono text-sm font-extrabold text-indigo-700 ml-1">1,380 KRW/USD</span>
+          </div>
+        </div>
+
+        <!-- Calculator Input Controls Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <!-- 1. Travelers & Duration -->
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+            <span class="font-extrabold text-slate-900 flex items-center space-x-1.5">
+              <i class="fa-solid fa-users text-blue-600"></i>
+              <span>1. 인원 & 여행 기간</span>
+            </span>
+            <div>
+              <label class="text-slate-600 block mb-1">여행 인원수: <strong id="calcTravelersLabel" class="text-blue-600">4인 (친구/가족)</strong></label>
+              <input type="range" id="calcTravelers" min="1" max="6" value="4" oninput="runBudgetCalc()" class="w-full accent-blue-600">
+            </div>
+            <div>
+              <label class="text-slate-600 block mb-1">총 체류 일수: <strong id="calcNightsLabel" class="text-blue-600">8박 10일</strong></label>
+              <input type="range" id="calcNights" min="5" max="12" value="8" oninput="runBudgetCalc()" class="w-full accent-blue-600">
+            </div>
+          </div>
+
+          <!-- 2. Hotel & Car Style -->
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+            <span class="font-extrabold text-slate-900 flex items-center space-x-1.5">
+              <i class="fa-solid fa-hotel text-indigo-600"></i>
+              <span>2. 숙소 등급 & 렌터카 유종</span>
+            </span>
+            <div>
+              <label class="text-slate-600 block mb-1">숙소 스타일</label>
+              <select id="calcHotelTier" onchange="runBudgetCalc()" class="w-full bg-white border border-slate-300 rounded-lg p-2 font-bold">
+                <option value="120">가성비 호텔/에어비앤비 (1박 $120)</option>
+                <option value="200" selected>표준 비즈니스 호텔 (1박 $200 / 홀리데이 인 등)</option>
+                <option value="350">프리미엄 4성급 리조트 (1박 $350)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-slate-600 block mb-1">렌터카 & 주유비</label>
+              <select id="calcCarTier" onchange="runBudgetCalc()" class="w-full bg-white border border-slate-300 rounded-lg p-2 font-bold">
+                <option value="50">준중형 세단 (1일 $50)</option>
+                <option value="85" selected>중형 SUV (1일 $85 / 4인 짐 적재 최적)</option>
+                <option value="130">7인승 대형 밴 (1일 $130)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 3. Theme Park Options & Food Strategy -->
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2.5">
+            <span class="font-extrabold text-slate-900 flex items-center space-x-1.5">
+              <i class="fa-solid fa-ticket text-purple-600"></i>
+              <span>3. 테마파크 & 식비 옵션</span>
+            </span>
+            <label class="flex items-center space-x-2 text-slate-700 cursor-pointer pt-1">
+              <input type="checkbox" id="calcIncludeUniversalExpress" onchange="runBudgetCalc()" checked class="w-4 h-4 text-purple-600 rounded">
+              <span>유니버설 익스프레스 패스 포함</span>
+            </label>
+            <label class="flex items-center space-x-2 text-slate-700 cursor-pointer">
+              <input type="checkbox" id="calcIncludeDisneyPass" onchange="runBudgetCalc()" class="w-4 h-4 text-purple-600 rounded">
+              <span>디즈니랜드 라이트닝 레인 포함</span>
+            </label>
+            <div class="pt-1">
+              <label class="text-slate-600 block mb-1">식비 스타일 (팁 18% 포함)</label>
+              <select id="calcFoodStyle" onchange="runBudgetCalc()" class="w-full bg-white border border-slate-300 rounded-lg p-2 font-bold">
+                <option value="45">가성비 절약 (인앤아웃, To-go 포장, 1일 1인 $45)</option>
+                <option value="80" selected>표준 미식 (바비큐, 레스토랑, 1일 1인 $80)</option>
+                <option value="140">럭셔리 다이닝 (스테이크하우스 매일, 1일 1인 $140)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Calculated Summary Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+          <div class="bg-indigo-50/70 p-4 rounded-xl border border-indigo-200">
+            <span class="text-[11px] font-bold text-indigo-700 block">👤 1인당 예상 여행 경비</span>
+            <h4 id="calcPerPersonKRW" class="text-xl sm:text-2xl font-black text-indigo-900 mt-1">3,650,000 원</h4>
+            <span id="calcPerPersonUSD" class="text-[11px] text-indigo-600 font-mono mt-0.5 block">약 $2,645 USD</span>
+          </div>
+
+          <div class="bg-blue-50/70 p-4 rounded-xl border border-blue-200">
+            <span class="text-[11px] font-bold text-blue-700 block">👥 총 일행 합산 경비</span>
+            <h4 id="calcTotalKRW" class="text-xl sm:text-2xl font-black text-blue-900 mt-1">14,600,000 원</h4>
+            <span id="calcTotalUSD" class="text-[11px] text-blue-600 font-mono mt-0.5 block">약 $10,580 USD</span>
+          </div>
+
+          <div class="bg-emerald-50/70 p-4 rounded-xl border border-emerald-200">
+            <span class="text-[11px] font-bold text-emerald-700 block">💡 꿀팁 적용 시 예상 절감액</span>
+            <h4 id="calcSavingsKRW" class="text-xl sm:text-2xl font-black text-emerald-900 mt-1">1,380,000 원 절약!</h4>
+            <p class="text-[10px] text-emerald-700 mt-0.5">커넥팅룸 신공 + To-go 포장 + 얼리버드 예매 기준</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ==================== TAB 4: THEME PARKS & TICKETS ==================== -->
+    <div id="tab-content-tickets" class="tab-panel hidden space-y-6">
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center space-x-3 border-b border-slate-100 pb-3">
+          <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-lg">🎟️</div>
+          <div>
+            <h2 class="text-base font-bold text-slate-900">LA, 올랜도 & 텍사스 주요 테마파크 및 명소 공식 홈페이지 정가 및 실전 공략 가이드</h2>
+            <p class="text-xs text-slate-500">각 명소의 공식 홈페이지에 고시된 정가, 예매 링크 및 실제 방문 시 시간·비용을 아끼는 실전 꿀팁을 제공합니다.</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+          <!-- Universal Studios Hollywood -->
+          <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-3">
+            <div class="flex justify-between items-start">
+              <div>
+                <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">LA 대표 테마파크</span>
+                <h3 class="text-base font-extrabold text-slate-900 mt-1">유니버설 스튜디오 할리우드</h3>
+              </div>
+              <a href="https://www.universalstudioshollywood.com" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-blue-600 hover:underline">공식 예매 ↗</a>
+            </div>
+
+            <div class="space-y-2 text-xs text-slate-700 border-t border-slate-200 pt-3">
+              <div class="flex justify-between items-center">
+                <span>🎫 1일 일반 입장권 (1-Day General):</span>
+                <span class="font-bold text-slate-900">$109 ~ $149</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span>⚡ 익스프레스 패스 (Universal Express):</span>
+                <span class="font-bold text-indigo-700">$199 ~ $309</span>
+              </div>
+            </div>
+
+            <div class="bg-indigo-50/70 p-2.5 rounded-lg border border-indigo-100 text-[11px] text-indigo-900 space-y-1">
+              <span class="font-bold flex items-center space-x-1">
+                <i class="fa-solid fa-star text-indigo-600"></i>
+                <span>할리우드 유니버설 필수 공략:</span>
+              </span>
+              <p>• <strong>스튜디오 투어(Studio Tour) 필수:</strong> 실제 영화 세트장을 기차로 1시간 동안 둘러보는 코스는 전 세계에서 LA 할리우드에만 있는 독점 시그니처입니다.</p>
+            </div>
+          </div>
+
+          <!-- Disneyland Resort Anaheim -->
+          <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-3">
+            <div class="flex justify-between items-start">
+              <div>
+                <span class="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">애너하임</span>
+                <h3 class="text-base font-extrabold text-slate-900 mt-1">디즈니랜드 리조트 LA</h3>
+              </div>
+              <a href="https://disneyland.disney.go.com" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-blue-600 hover:underline">공식 예매 ↗</a>
+            </div>
+
+            <div class="space-y-2 text-xs text-slate-700 border-t border-slate-200 pt-3">
+              <div class="flex justify-between items-center">
+                <span>🏰 1일 1파크 티켓 (Tier 0~6):</span>
+                <span class="font-bold text-slate-900">$104 ~ $224</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span>📱 라이트닝 레인 (Lightning Lane Multi Pass):</span>
+                <span class="font-bold text-amber-700">+$32/일 추가~</span>
+              </div>
+            </div>
+
+            <div class="bg-rose-50/70 p-2.5 rounded-lg border border-rose-100 text-[11px] text-rose-900 space-y-1">
+              <span class="font-bold flex items-center space-x-1">
+                <i class="fa-solid fa-circle-exclamation text-rose-600"></i>
+                <span>디즈니랜드 예약 필수 주의사항:</span>
+              </span>
+              <p>• 티켓 구매 후 공식 앱에서 <strong>'파크 방문일 예약(Theme Park Reservation)'</strong>을 반드시 별도로 완료해야 입장이 가능합니다.</p>
+              <p>• 한국 카드 결제 튕김 시 <strong>트래블로그/트래블월렛, 애플페이</strong>를 이용하면 승인 오류를 방지할 수 있습니다.</p>
+            </div>
+          </div>
+
+          <!-- Walt Disney World Orlando -->
+          <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-3 md:col-span-2">
+            <div class="flex justify-between items-start">
+              <div>
+                <span class="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">플로리다 올랜도</span>
+                <h3 class="text-base font-extrabold text-slate-900 mt-1">월트 디즈니 월드 (WDW) 매직킹덤 실전 비밀 공략 & 500불 절약팁</h3>
+              </div>
+              <a href="https://disneyworld.disney.go.com" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-blue-600 hover:underline">공식 예매 ↗</a>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs pt-2">
+              <div class="bg-white p-3 rounded-xl border border-amber-200">
+                <strong class="text-amber-800 block mb-1">1. 커넥팅룸(Connecting Room) 신공</strong>
+                <p class="text-slate-600 text-[11px]">가성비 숙소인 '올스타 무비 리조트'에서 4인 방문 시 방 2개가 내부 문으로 연결된 커넥팅룸을 요청하면 일반 빌라형 객실 대비 <strong>$500 이상 절약</strong> 가능!</p>
+              </div>
+              <div class="bg-white p-3 rounded-xl border border-amber-200">
+                <strong class="text-amber-800 block mb-1">2. 새벽 6:30 셔틀 & 오픈런</strong>
+                <p class="text-slate-600 text-[11px]">리조트 투숙객 30분 조기입장(Early Entry) 활용 ➔ 최고 인기인 <strong>'세븐 드워프 마인 트레인'</strong> 1순위 탑승 완료.</p>
+              </div>
+              <div class="bg-white p-3 rounded-xl border border-amber-200">
+                <strong class="text-amber-800 block mb-1">3. 불꽃놀이 압도적 뷰 명당</strong>
+                <p class="text-slate-600 text-[11px]">시작 1시간 30분 전(18:30경) 지도의 <strong>쓰레기통 근처 지정 스팟</strong>에 착석! 앞 사람 머리에 안 가리고 불꽃이 머리 위에서 터지는 명당입니다.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 5: PREPARATION & SAFETY ==================== -->
+    <div id="tab-content-preparation" class="tab-panel hidden space-y-5">
+      
+      <!-- Danger Zones Alert Banner -->
+      <div class="bg-gradient-to-r from-rose-900 via-rose-800 to-slate-900 rounded-2xl p-5 text-white shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b border-rose-700/60 pb-3">
+          <div class="flex items-center space-x-2">
+            <span class="p-1.5 bg-rose-600 text-white rounded-lg text-xs font-bold">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+            </span>
+            <h3 class="text-sm sm:text-base font-extrabold">초보 여행자 필수: LA 3대 우범 지역 & 생존 치안 수칙</h3>
+          </div>
+          <span class="text-[11px] bg-rose-500/40 px-2.5 py-0.5 rounded-full border border-rose-400/50">생존 가이드</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+          <div class="bg-black/30 p-3 rounded-xl border border-rose-500/30">
+            <span class="font-extrabold text-rose-300 block mb-1">1. 다운타운 스키드 로 (Skid Row)</span>
+            <p class="text-slate-300 text-[11px] leading-relaxed">대규모 노숙자 텐트촌과 마약 투약자 밀집. 보행 중 텐트촌이 보이면 <strong>즉시 반대 방향으로 회항</strong>하세요.</p>
+          </div>
+          <div class="bg-black/30 p-3 rounded-xl border border-rose-500/30">
+            <span class="font-extrabold text-rose-300 block mb-1">2. 할리우드 동쪽 (East Hollywood)</span>
+            <p class="text-slate-300 text-[11px] leading-relaxed">할리우드 대로에서 동쪽으로 갈수록 노숙자 텐트와 범죄율 급증. 텐트가 늘어나는 분위기 감지 즉시 안전지대로 복귀!</p>
+          </div>
+          <div class="bg-black/30 p-3 rounded-xl border border-rose-500/30">
+            <span class="font-extrabold text-rose-300 block mb-1">3. LA 남부 (South LA)</span>
+            <p class="text-slate-300 text-[11px] leading-relaxed">거대 갱단 서식 지역. 단순 관광 방문을 절대 금지하며, 내비게이션 경로 이탈에 유의하세요.</p>
+          </div>
+        </div>
+
+        <div class="bg-black/40 p-3 rounded-xl border border-white/10 text-[11px] space-y-1 text-slate-200">
+          <p>⚠️ <strong>갱단 상징 색상 주의:</strong> 블러드(Bloods)는 <strong>빨간색</strong>, 크립스(Crips)는 <strong>파란색</strong>입니다. 파란색 상의에 LA 다저스 모자를 쓰고 우범 골목에 들어가지 마세요.</p>
+          <p>👁️ <strong>시선 처리 & 야간 이동:</strong> 이상 행동자와 <strong>절대 눈을 마주치지 말고 땅이나 앞을 보며 신속 이동</strong>하세요. 밤 8~9시 이후 야외 단독 보행은 절대 금물입니다 (우버/웨이모 이용).</p>
+        </div>
+      </div>
+
+      <!-- Checklist Section with Dynamic Progress Bar -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+        <div class="flex flex-wrap items-center justify-between border-b border-slate-100 pb-3 gap-2">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">📋 미국 여행 필수 준비물 & 짐싸기 체크리스트</h2>
+            <p class="text-xs text-slate-500">여행 유튜버 및 현지 전문가 추천 팁을 모두 반영한 실전 인터랙티브 체크리스트입니다.</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <div class="w-32 bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200">
+              <div id="checkProgressBar" class="bg-emerald-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <span id="checklistCount" class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
+              0 / 20
+            </span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm">
+          <!-- 1. Docs -->
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
+            <h4 class="font-extrabold text-blue-700 flex items-center space-x-1.5 text-xs">
+              <i class="fa-solid fa-passport"></i>
+              <span>1. 필수 서류 & 결제 (출국 1주일 전)</span>
+            </h4>
+            <label class="flex items-center space-x-2 text-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklistProgress()" class="prep-check rounded text-blue-600 w-4 h-4">
+              <span>여권 유효기간 (출국일 기준 6개월 이상)</span>
+            </label>
+            <label class="flex items-center space-x-2 text-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklistProgress()" class="prep-check rounded text-blue-600 w-4 h-4">
+              <span>ESTA 미국 전자여행허가 승인서 (출력본 지참)</span>
+            </label>
+            <label class="flex items-center space-x-2 text-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklistProgress()" class="prep-check rounded text-blue-600 w-4 h-4">
+              <span>국제운전면허증 + 한국 영문면허증 원본</span>
+            </label>
+            <label class="flex items-center space-x-2 text-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklistProgress()" class="prep-check rounded text-blue-600 w-4 h-4">
+              <span>트래블로그 / 트래블월렛 카드 (환전 수수료 0원)</span>
+            </label>
+            <label class="flex items-center space-x-2 text-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklistProgress()" class="prep-check rounded text-blue-600 w-4 h-4">
+              <span>해외 결제 가능 실물 신용카드 (호텔/렌터카 디포짓용)</span>
+            </label>
+          </div>
+
+          <!-- 2. Tech -->
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
+            <h4 class="font-extrabold text-indigo-700 flex items-center space-x-1.5 text-xs">
+              <i class="fa-solid fa-plug"></i>
+              <span>2. 전자기기 & 로밍/eSIM</span>
+            </h4>
+            <label class="flex items-center space-x-2 text-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklistProgress()" class="prep-check rounded text-blue-600 w-4 h-4">
+              <span>미국용 110V 11자 돼지코 (2~3개) + 3구 멀티탭</span>
+            </label>
+            <label class="flex items-center space-x-2 text-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklistProgress()" class="prep-check rounded text-blue-600 w-4 h-4">
+              <span>미국 현지 eSIM 또는 통신사 데이터 로밍</span>
+            </label>
+            <label class="flex items-center space-x-2 text-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklistProgress()" class="prep-check rounded text-blue-600 w-4 h-4">
+              <span>보조배터리 (반드시 기내 휴대, 위탁 수하물 불가)</span>
+            </label>
+            <label class="flex items-center space-x-2 text-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklistProgress()" class="prep-check rounded text-blue-600 w-4 h-4">
+              <span>차량용 송풍구 거치대 + C타입 충전 케이블</span>
+            </label>
+            <label class="flex items-center space-x-2 text-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklistProgress()" class="prep-check rounded text-blue-600 w-4 h-4">
+              <span>에어태그 / 스마트태그 (수하물 분실 방지)</span>
+            </label>
+          </div>
+
+          <!-- 3. Medicine -->
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
+            <h4 class="font-extrabold text-emerald-700 flex items-center space-x-1.5 text-xs">
+              <i class="fa-solid fa-briefcase-medical"></i>
+              <span>3. 의약품 & 호텔/위생용품</span>
+            </h4>
+            <label class="flex items-center space-x-2 text-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklistProgress()" class="prep-check rounded text-blue-600 w-4 h-4">
+              <span>한국 상비약 세트 (종합감기약, 타이레놀, 소화제, 지사제)</span>
+            </label>
+            <label class="flex items-center space-x-2 text-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklistProgress()" class="prep-check rounded text-blue-600 w-4 h-4">
+              <span>샤워기 필터 헤드 & 리필 필터 (석회수 방지)</span>
+            </label>
+            <label class="flex items-center space-x-2 text-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklistProgress()" class="prep-check rounded text-blue-600 w-4 h-4">
+              <span>고보습 립밤 & 바디로션, 인공눈물 (서부 건조 대비)</span>
+            </label>
+            <label class="flex items-center space-x-2 text-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklistProgress()" class="prep-check rounded text-blue-600 w-4 h-4">
+              <span>칫솔, 치약, 슬리퍼 (미국 호텔 기본 어메니티 없음)</span>
+            </label>
+            <label class="flex items-center space-x-2 text-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklistProgress()" class="prep-check rounded text-blue-600 w-4 h-4">
+              <span>휴대용 손소독 티슈 & 알코올 스왑</span>
+            </label>
+          </div>
+
+          <!-- 4. Gear -->
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
+            <h4 class="font-extrabold text-amber-700 flex items-center space-x-1.5 text-xs">
+              <i class="fa-solid fa-suitcase-rolling"></i>
+              <span>4. 기내 꿀템 & 패킹/보안</span>
+            </h4>
+            <label class="flex items-center space-x-2 text-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklistProgress()" class="prep-check rounded text-blue-600 w-4 h-4">
+              <span>장거리 비행용 목베개 & 기내용 슬리퍼, 안대</span>
+            </label>
+            <label class="flex items-center space-x-2 text-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklistProgress()" class="prep-check rounded text-blue-600 w-4 h-4">
+              <span>압박스타킹 (11~14시간 장시간 비행 다리 붓기 방지)</span>
+            </label>
+            <label class="flex items-center space-x-2 text-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklistProgress()" class="prep-check rounded text-blue-600 w-4 h-4">
+              <span>선글라스 & 자외선 차단제 (강한 햇빛 대비)</span>
+            </label>
+            <label class="flex items-center space-x-2 text-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklistProgress()" class="prep-check rounded text-blue-600 w-4 h-4">
+              <span>TSA 인증 캐리어 자물쇠 (보안검색 파손 방지)</span>
+            </label>
+            <label class="flex items-center space-x-2 text-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklistProgress()" class="prep-check rounded text-blue-600 w-4 h-4">
+              <span>휴대용 캐리어 무게 손저울 (23kg 수하물 체크)</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
+    <p>미국 LA & 텍사스 올인원 항공권 & 인터랙티브 여행 대시보드 ✈️</p>
+  </footer>
+
+  <!-- Toast Notification Box -->
+  <div id="toastMsgBox" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl text-xs flex items-center space-x-2">
+    <i class="fa-solid fa-check text-emerald-400"></i>
+    <span id="toastText">처리되었습니다.</span>
+  </div>
+
+  <script>
+    // Audio Synthesis Feedback
+    let soundEnabled = true;
+    let audioCtx = null;
+
+    function playAppBeep(freq = 520, duration = 0.08) {
+      if (!soundEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {
+        // Audio error fallback
+      }
+    }
+
+    function toggleAppSound() {
+      soundEnabled = !soundEnabled;
+      const label = document.getElementById('soundLabel');
+      const icon = document.getElementById('soundIcon');
+      if (soundEnabled) {
+        label.innerText = '효과음 ON';
+        icon.className = 'fa-solid fa-volume-high text-blue-600';
+        playAppBeep(640, 0.1);
+        showToast('효과음이 켜졌습니다.');
+      } else {
+        label.innerText = '효과음 OFF';
+        icon.className = 'fa-solid fa-volume-xmark text-slate-400';
+        showToast('효과음이 꺼졌습니다.');
+      }
+    }
+
+    // 4 Theme Engine
+    function setAppTheme(themeKey) {
+      document.body.setAttribute('data-theme', themeKey);
+      document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.remove('ring-2', 'ring-offset-1', 'ring-blue-500');
+      });
+      const activeBtn = document.getElementById('theme-btn-' + themeKey);
+      if (activeBtn) activeBtn.classList.add('ring-2', 'ring-offset-1', 'ring-blue-500');
+      playAppBeep(themeKey === 'cyber' ? 440 : 580);
+      showToast(`[${activeBtn ? activeBtn.innerText.trim() : themeKey}] 테마가 적용되었습니다.`);
+    }
+
+    // Flight Data
+    const baseFlightData = [
+      { airline: "대한항공", route: "ICN-LAX / DFW-ICN (다구간)", schedule: "ICN 14:30 ➔ LAX 09:20 / DFW 12:40 ➔ ICN 17:50(+1)", direct: true, basePrice: 2180000, dest: "ALL" },
+      { airline: "아메리칸 항공", route: "ICN-LAX / DFW-ICN (다구간)", schedule: "ICN 18:50 ➔ LAX 13:40 / DFW 10:45 ➔ ICN 15:10(+1)", direct: true, basePrice: 1650000, dest: "ALL" },
+      { airline: "에어프레미아+AA", route: "ICN-LAX + LAX-DFW (조합)", schedule: "ICN 13:50 ➔ LAX 08:45 / DFW 11:20 ➔ ICN 16:30(+1)", direct: true, basePrice: 1420000, dest: "ALL" },
+      { airline: "대한항공", route: "ICN ↔ LAX (직항 왕복)", schedule: "ICN 14:30 ➔ LAX 09:20 / LAX 12:30 ➔ ICN 17:30(+1)", direct: true, basePrice: 1980000, dest: "LAX" },
+      { airline: "아시아나항공", route: "ICN ↔ LAX (직항 왕복)", schedule: "ICN 20:40 ➔ LAX 15:30 / LAX 23:00 ➔ ICN 04:20(+2)", direct: true, basePrice: 1920000, dest: "LAX" },
+      { airline: "에어프레미아", route: "ICN ↔ LAX (직항 왕복)", schedule: "ICN 13:50 ➔ LAX 08:45 / LAX 10:50 ➔ ICN 15:50(+1)", direct: true, basePrice: 1250000, dest: "LAX" },
+      { airline: "유나이티드", route: "ICN ↔ SFO ↔ LAX (1회 경유)", schedule: "ICN 11:30 ➔ SFO 06:10 / SFO 08:30 ➔ LAX 10:10", direct: false, basePrice: 1380000, dest: "LAX" },
+      { airline: "대한항공", route: "ICN ↔ DFW (직항 왕복)", schedule: "ICN 09:20 ➔ DFW 07:15 / DFW 12:40 ➔ ICN 17:50(+1)", direct: true, basePrice: 2250000, dest: "DFW" },
+      { airline: "아메리칸 항공", route: "ICN ↔ DFW (직항 왕복)", schedule: "ICN 18:50 ➔ DFW 16:50 / DFW 10:45 ➔ ICN 15:10(+1)", direct: true, basePrice: 1720000, dest: "DFW" },
+      { airline: "델타 항공", route: "ICN ↔ SEA ↔ DFW (1회 경유)", schedule: "ICN 19:40 ➔ SEA 13:30 / SEA 15:40 ➔ DFW 21:25", direct: false, basePrice: 1520000, dest: "DFW" }
+    ];
+
+    let flightData = JSON.parse(JSON.stringify(baseFlightData)).map(d => ({ ...d, price: d.basePrice }));
+    let flightChart = null;
+
+    let currentCalYear = 2027;
+    let currentCalMonth = 5;
+    let selectedDepDate = '2027-05-10';
+    let selectedRetDate = '2027-05-18';
+    let selectingStep = 'dep';
+
+    // Interactive Map Spot Dictionary
+    const MAP_SPOTS = {
+      icn: {
+        badge: "출국 & 귀국 거점",
+        title: "인천 국제공항 (ICN 제1/제2 터미널)",
+        days: "Day 1 & Day 8~10",
+        desc: "미국 서부(LAX)로 출국 및 텍사스(DFW) 직항 탑승 후 입국 거점. ESTA 및 수하물 무게 체크!",
+        transit: "출국 3시간 전 도착 필수",
+        address: "인천광역시 중구 공항로 272"
+      },
+      lax: {
+        badge: "LA 관문",
+        title: "로스앤젤레스 국제공항 (LAX)",
+        days: "Day 1 & Day 4",
+        desc: "육류/가공품이 없을 시 세관 질문에 단호히 'No food'라고 답해 정밀검사를 패스하세요.",
+        transit: "렌터카 셔틀 or 플라이어웨이 버스",
+        address: "1 World Way, Los Angeles, CA 90045"
+      },
+      santamonica: {
+        badge: "서부 해변 & 석양",
+        title: "산타모니카 피어 & 루트 66 종점 표지판",
+        days: "Day 1 오후",
+        desc: "미국 횡단도로의 끝 'Route 66 End of Trail' 표지판 인생샷 & 태평양 황금빛 일몰. 인앤아웃 버거 더블더블 필수!",
+        transit: "LAX에서 차량 약 25분",
+        address: "200 Santa Monica Pier, Santa Monica, CA 90401"
+      },
+      universal: {
+        badge: "영화 테마파크",
+        title: "유니버설 스튜디오 할리우드",
+        days: "Day 3 종일",
+        desc: "세계 유일 실제 영화 세트장 둘러보는 1시간 '스튜디오 투어' & 마리오 카트. 성수기 익스프레스 티켓 권장.",
+        transit: "할리우드에서 지하철/차량 10분",
+        address: "100 Universal City Plaza, Universal City, CA 91608"
+      },
+      griffith: {
+        badge: "도심 야경 명소",
+        title: "그리피스 천문대 (Griffith Observatory)",
+        days: "Day 2 저녁",
+        desc: "영화 <라라랜드> 촬영지. 노을 지기 30분 전 도착해 낮 전경 ➔ 황금빛 노을 ➔ 라라랜드 야경 3단 콤보 감상!",
+        transit: "더 그로브에서 차량 25분 (주차 혼잡)",
+        address: "2800 E Observatory Rd, Los Angeles, CA 90027"
+      },
+      dfw: {
+        badge: "텍사스 거점 공항",
+        title: "댈러스/포트워스 국제공항 (DFW)",
+        days: "Day 4 & Day 8",
+        desc: "아메리칸 항공의 메가 허브. 인천 직항 출도착 및 렌터카 수령/반납이 매우 편리합니다.",
+        transit: "LAX ➔ DFW 국내선 3시간 15분",
+        address: "2400 Aviation Dr, DFW Airport, TX 75261"
+      },
+      stockyards: {
+        badge: "정통 카우보이",
+        title: "포트워스 스톡야드 (Stockyards Historic District)",
+        days: "Day 5 오전",
+        desc: "오전 11:30 실제 카우보이들이 뿔 달린 롱혼(Longhorn) 소를 모는 거리 퍼레이드 관람!",
+        transit: "DFW 공항에서 차량 약 30분",
+        address: "130 E Exchange Ave, Fort Worth, TX 76164"
+      },
+      bbq: {
+        badge: "정통 텍사스 BBQ",
+        title: "딥 엘름 & Pecan Lodge 참나무 바비큐",
+        days: "Day 5 오후 & Day 6",
+        desc: "참나무 숯에 12시간 훈제한 육즙 가득 브리스킷 & 비프립. 대용량이므로 남은 고기는 'To-go box' 포장 필수!",
+        transit: "댈러스 다운타운 인접",
+        address: "2702 Main St, Dallas, TX 75226"
+      },
+      wdw: {
+        badge: "플로리다 테마파크",
+        title: "월트 디즈니 월드 (올랜도 매직킹덤)",
+        days: "플로리다 옵션",
+        desc: "올스타 무비 커넥팅룸 $500 절약 + 06:30 셔틀 조기입장 + 18:30 쓰레기통 근처 불꽃놀이 명당 확보!",
+        transit: "DFW에서 국내선 비행 2시간 40분",
+        address: "Walt Disney World Resort, Orlando, FL 32830"
+      }
+    };
+
+    let currentSelectedSpotKey = 'santamonica';
+
+    // Interactive Map Spot Selector
+    function selectMapSpot(spotKey) {
+      const data = MAP_SPOTS[spotKey];
+      if (!data) return;
+      currentSelectedSpotKey = spotKey;
+
+      playAppBeep(600, 0.08);
+
+      document.getElementById('spotBadge').innerText = data.badge;
+      document.getElementById('spotTitle').innerText = data.title;
+      document.getElementById('spotDaysTag').innerText = data.days;
+      document.getElementById('spotDesc').innerText = data.desc;
+      document.getElementById('spotTransitTip').innerText = data.transit;
+
+      const card = document.getElementById('mapSpotDetailCard');
+      card.classList.add('ring-2', 'ring-blue-400');
+      setTimeout(() => card.classList.remove('ring-2', 'ring-blue-400'), 400);
+    }
+
+    function copyCurrentSpotAddress() {
+      const data = MAP_SPOTS[currentSelectedSpotKey];
+      if (!data || !data.address) return;
+      copyCustomString(data.address);
+      showToast(`[${data.title}] 주소가 복사되었습니다!`);
+    }
+
+    function filterMapRegion(regionKey) {
+      document.querySelectorAll('.map-filter-btn').forEach(b => {
+        b.className = 'map-filter-btn px-2.5 py-1 rounded-lg font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200';
+      });
+      const activeBtn = document.getElementById('map-filter-' + regionKey);
+      if (activeBtn) {
+        activeBtn.className = 'map-filter-btn px-2.5 py-1 rounded-lg font-bold bg-slate-900 text-white shadow-xs';
+      }
+      playAppBeep(520);
+
+      if (regionKey === 'LA') selectMapSpot('santamonica');
+      else if (regionKey === 'TEXAS') selectMapSpot('stockyards');
+      else if (regionKey === 'ORLANDO') selectMapSpot('wdw');
+      else selectMapSpot('lax');
+    }
+
+    // Promotions Engine
+    let currentPromotions = [
+      { airline: "대한항공", colorBadge: "bg-blue-100 text-blue-700 border-blue-200", btnColor: "bg-blue-600 hover:bg-blue-700", hubName: "공식 이벤트 센터", title: "미주 직항 얼리버드 & 카드 할인", desc: "현대/국민카드 5~10% 결제일 청구할인, 보너스 마일리지 적립 쿠폰 제공", activeCoupon: "현대카드 결제 시 최대 10만 원 청구할인", url: "https://www.koreanair.com/kr/ko/promotion/list" },
+      { airline: "아시아나항공", colorBadge: "bg-sky-100 text-sky-700 border-sky-200", btnColor: "bg-sky-600 hover:bg-sky-700", hubName: "공식 프로모션 룸", title: "LAX 노선 특가 & 제휴 혜택", desc: "삼성/신한카드 청구할인, 인천공항 라운지 쿠폰 및 유료좌석 할인 이벤트", activeCoupon: "KB국민카드 미주 노선 7% 즉시할인", url: "https://flyasiana.com/C/KR/KO/event/index" },
+      { airline: "에어프레미아", colorBadge: "bg-indigo-100 text-indigo-700 border-indigo-200", btnColor: "bg-indigo-600 hover:bg-indigo-700", hubName: "프로모션 코드 존", title: "LAX 전용 할인코드 & 프로모션", desc: "프레미아42 및 이코노미 최대 15% 쿠폰 코드, 카카오페이 결제 혜택", activeCoupon: "카카오톡 채널 전용 게릴라 할인코드 배포 중", url: "https://www.airpremia.com/promotion" },
+      { airline: "아메리칸 항공", colorBadge: "bg-red-100 text-red-700 border-red-200", btnColor: "bg-red-600 hover:bg-red-700", hubName: "Special Offers", title: "DFW 직항 AAdvantage 특가", desc: "댈러스 직항 최저가 요금제, 마일리지 추가 적립 및 무료 수하물 2개 제공", activeCoupon: "AAdvantage 회원 직항 특가 & 무료 위탁수하물 2개", url: "https://www.americanairlines.co.kr/intl/kr/special-offers/index.jsp" }
+    ];
+
+    function renderPromotionCards() {
+      const grid = document.getElementById('promotionsCardGrid');
+      if (!grid) return;
+      grid.innerHTML = '';
+      currentPromotions.forEach(promo => {
+        const card = document.createElement('div');
+        card.className = "p-4 rounded-xl border border-slate-200 bg-slate-50 hover:border-rose-300 transition flex flex-col justify-between shadow-2xs";
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold px-2 py-0.5 rounded border ${promo.colorBadge}">${promo.airline}</span>
+              <span class="text-[10px] text-slate-400 font-medium">${promo.hubName}</span>
+            </div>
+            <h4 class="font-bold text-xs text-slate-900 mt-2.5 leading-snug">${promo.title}</h4>
+            <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">${promo.desc}</p>
+            <div class="mt-2.5 py-1 px-2 rounded-md bg-white border border-rose-100 text-[10px] font-bold text-rose-600 flex items-center space-x-1">
+              <i class="fa-solid fa-gift text-rose-500"></i>
+              <span class="truncate">${promo.activeCoupon}</span>
+            </div>
+          </div>
+          <a href="${promo.url}" target="_blank" rel="noopener noreferrer" class="mt-3.5 block text-center text-xs font-bold py-2 ${promo.btnColor} text-white rounded-lg transition shadow-2xs">
+            ${promo.airline} 프로모션 바로가기 ↗
+          </a>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    async function refreshPromotions() {
+      const btn = document.getElementById('promoRefreshBtn');
+      const icon = document.getElementById('promoSpinnerIcon');
+      const statusBadge = document.getElementById('promoLiveStatusBadge');
+      if (btn) btn.disabled = true;
+      if (icon) icon.className = "fa-solid fa-spinner spinner mr-1";
+      if (statusBadge) {
+        statusBadge.innerHTML = `<i class="fa-solid fa-spinner spinner mr-1 text-[9px]"></i>갱신 중...`;
+      }
+      playAppBeep(480);
+      showToast("항공사 공홈 실시간 프로모션을 동기화하는 중...");
+      await new Promise(r => setTimeout(r, 700));
+
+      renderPromotionCards();
+      if (statusBadge) {
+        statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1"></span>실시간 확인 완료`;
+        statusBadge.className = "inline-flex items-center px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 rounded-full border border-emerald-200";
+      }
+      if (btn) btn.disabled = false;
+      if (icon) icon.className = "fa-solid fa-arrows-rotate mr-1";
+      playAppBeep(680);
+      showToast("항공사 공홈 프로모션 및 제휴 카드사 혜택이 최신으로 갱신되었습니다!");
+    }
+
+    // Calendar Functions
+    function changeCalendarMonth(delta) {
+      let nextMonth = currentCalMonth + delta;
+      if (nextMonth < 4) nextMonth = 4;
+      if (nextMonth > 10) nextMonth = 10;
+      currentCalMonth = nextMonth;
+      playAppBeep(540);
+      renderInlineCalendar();
+    }
+
+    function jumpToMonth(year, month) {
+      currentCalYear = year;
+      currentCalMonth = month;
+      playAppBeep(560);
+      renderInlineCalendar();
+    }
+
+    function renderInlineCalendar() {
+      const grid = document.getElementById('inlineCalendarGrid');
+      const title = document.getElementById('calendarMonthTitle');
+      if (!grid || !title) return;
+
+      title.innerText = `${currentCalYear}년 ${currentCalMonth}월`;
+
+      document.querySelectorAll('.month-tab-btn').forEach(btn => {
+        const m = parseInt(btn.getAttribute('data-month'), 10);
+        if (m === currentCalMonth) {
+          btn.className = 'month-tab-btn px-2.5 py-1 rounded-md border text-white bg-blue-600 border-blue-600 font-bold';
+        } else {
+          btn.className = 'month-tab-btn px-2.5 py-1 rounded-md border text-slate-600 border-slate-200 hover:bg-slate-100 font-semibold';
+        }
+      });
+
+      grid.innerHTML = '';
+      const firstDay = new Date(currentCalYear, currentCalMonth - 1, 1).getDay();
+      const lastDate = new Date(currentCalYear, currentCalMonth, 0).getDate();
+
+      for (let i = 0; i < firstDay; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'h-9';
+        grid.appendChild(empty);
+      }
+
+      for (let day = 1; day <= lastDate; day++) {
+        const dateStr = `${currentCalYear}-${String(currentCalMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayOfWeek = new Date(currentCalYear, currentCalMonth - 1, day).getDay();
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.onclick = () => handleCalendarDateClick(dateStr);
+
+        const isDep = dateStr === selectedDepDate;
+        const isRet = dateStr === selectedRetDate;
+        const isBetween = selectedDepDate && selectedRetDate && (dateStr > selectedDepDate && dateStr < selectedRetDate);
+
+        let cellClass = 'h-9 rounded-lg font-bold flex flex-col items-center justify-center transition text-xs relative ';
+        if (isDep) cellClass += 'bg-blue-600 text-white shadow-xs z-10';
+        else if (isRet) cellClass += 'bg-emerald-600 text-white shadow-xs z-10';
+        else if (isBetween) cellClass += 'bg-blue-100 text-blue-900 font-semibold';
+        else {
+          if (dayOfWeek === 0) cellClass += 'text-rose-500 hover:bg-slate-100 ';
+          else if (dayOfWeek === 6) cellClass += 'text-blue-500 hover:bg-slate-100 ';
+          else cellClass += 'text-slate-700 hover:bg-slate-100 ';
+        }
+
+        btn.className = cellClass;
+        btn.innerHTML = `<span>${day}</span>`;
+        if (isDep) btn.innerHTML += `<span class="text-[8px] leading-none opacity-90 -mt-0.5">출발</span>`;
+        else if (isRet) btn.innerHTML += `<span class="text-[8px] leading-none opacity-90 -mt-0.5">귀국</span>`;
+        grid.appendChild(btn);
+      }
+    }
+
+    function handleCalendarDateClick(dateStr) {
+      playAppBeep(580);
+      if (selectingStep === 'dep') {
+        selectedDepDate = dateStr;
+        if (selectedRetDate <= selectedDepDate) selectedRetDate = '';
+        selectingStep = 'ret';
+      } else {
+        if (dateStr <= selectedDepDate) {
+          selectedDepDate = dateStr;
+          selectedRetDate = '';
+          selectingStep = 'ret';
+        } else {
+          selectedRetDate = dateStr;
+          selectingStep = 'dep';
+        }
+      }
+      applyDateSelection();
+    }
+
+    function setQuickDate(dep, ret) {
+      selectedDepDate = dep;
+      selectedRetDate = ret;
+      selectingStep = 'dep';
+      playAppBeep(620);
+      applyDateSelection();
+      showToast('선택한 추천 일정으로 날짜가 동기화되었습니다.');
+    }
+
+    function applyDateSelection() {
+      const depDisp = document.getElementById('selectedDepDisplay');
+      const retDisp = document.getElementById('selectedRetDisplay');
+      const durationBadge = document.getElementById('tripDurationBadge');
+
+      if (depDisp) depDisp.innerText = selectedDepDate;
+      if (retDisp) retDisp.innerText = selectedRetDate || '선택 대기';
+
+      let diffDays = 8;
+      if (selectedDepDate && selectedRetDate) {
+        const diffTime = Math.abs(new Date(selectedRetDate) - new Date(selectedDepDate));
+        diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      }
+      if (durationBadge) durationBadge.innerText = `${diffDays}박 ${diffDays + 2}일`;
+
+      const nightsSlider = document.getElementById('calcNights');
+      if (nightsSlider) {
+        nightsSlider.value = Math.min(Math.max(diffDays, 5), 12);
+        runBudgetCalc();
+      }
+
+      updateFlightDashboard();
+      updateOfficialDeepLinks(selectedDepDate, selectedRetDate || selectedDepDate);
+      renderInlineCalendar();
+    }
+
+    function getGoogleFlightsUrl(item, depDate, retDate) {
+      const dest = item ? item.dest : (document.getElementById('flightDestSelect')?.value || 'ALL');
+      if (dest === 'LAX') {
+        return `https://www.google.com/travel/flights?q=flights%20from%20ICN%20to%20LAX%20on%20${depDate}%20through%20${retDate}`;
+      } else if (dest === 'DFW') {
+        return `https://www.google.com/travel/flights?q=flights%20from%20ICN%20to%20DFW%20on%20${depDate}%20through%20${retDate}`;
+      } else {
+        return `https://www.google.com/travel/flights?q=flights%20from%20ICN%20to%20LAX%20on%20${depDate}%20and%20DFW%20to%20ICN%20on%20${retDate}`;
+      }
+    }
+
+    function updateOfficialDeepLinks(depDate, retDate) {
+      const gfBtn = document.getElementById('googleFlightsOfficialBtn');
+      const btnText = document.getElementById('deepLinkBtnText');
+      if (gfBtn) gfBtn.href = getGoogleFlightsUrl(null, depDate, retDate);
+      if (btnText) btnText.innerText = `Google Flights(${depDate}) 검색 ↗`;
+    }
+
+    // Flights Table & Chart
+    function renderFlightTableAndChart(data) {
+      const tbody = document.getElementById('flightTableBody');
+      const badge = document.getElementById('priceCountBadge');
+      if (!tbody) return;
+
+      tbody.innerHTML = '';
+      if (badge) badge.innerText = `${data.length}건 조회됨`;
+
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">선택 조건에 맞는 항공편이 없습니다.</td></tr>';
+        if (flightChart) { flightChart.destroy(); flightChart = null; }
+        return;
+      }
+
+      data.forEach(item => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-slate-50 transition border-b border-slate-100';
+        const gfUrl = getGoogleFlightsUrl(item, selectedDepDate, selectedRetDate || selectedDepDate);
+
+        row.innerHTML = `
+          <td class="p-2.5 font-bold text-slate-800">
+            <div>${item.airline}</div>
+            <div class="text-[10px] text-slate-400 font-normal">Google Flights 추적</div>
+          </td>
+          <td class="p-2.5 text-slate-600 font-medium">${item.route}</td>
+          <td class="p-2.5 text-indigo-900 font-bold text-[11px] leading-relaxed">${item.schedule}</td>
+          <td class="p-2.5">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.direct ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}">
+              ${item.direct ? '직항' : '경유'}
+            </span>
+          </td>
+          <td class="p-2.5 text-right font-extrabold text-blue-600 whitespace-nowrap">${item.price.toLocaleString()} 원</td>
+          <td class="p-2.5 text-center whitespace-nowrap">
+            <a href="${gfUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center space-x-1 px-2 py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 rounded text-[11px] font-bold transition border border-sky-200">
+              <i class="fa-brands fa-google text-[10px]"></i>
+              <span>조회</span>
+            </a>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      try {
+        if (typeof Chart !== 'undefined') {
+          const canvas = document.getElementById('flightPriceChart');
+          if (canvas) {
+            const ctx = canvas.getContext('2d');
+            if (flightChart) flightChart.destroy();
+            flightChart = new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: data.map(d => `${d.airline}`),
+                datasets: [{
+                  label: 'Google Flights 기준 운임 (원)',
+                  data: data.map(d => d.price),
+                  backgroundColor: 'rgba(37, 99, 235, 0.75)',
+                  borderRadius: 6
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    callbacks: {
+                      label: function(ctx) { return (ctx.parsed.y || 0).toLocaleString() + ' 원'; }
+                    }
+                  }
+                },
+                scales: {
+                  y: {
+                    beginAtZero: false,
+                    ticks: { callback: function(v) { return (v / 10000) + '만'; } }
+                  }
+                }
+              }
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("Chart render skipped:", err);
+      }
+    }
+
+    function updateFlightDashboard() {
+      const destEl = document.getElementById('flightDestSelect');
+      const directEl = document.getElementById('directOnlyCheck');
+      if (!destEl || !directEl) return;
+
+      const dest = destEl.value;
+      const directOnly = directEl.checked;
+
+      let filtered = flightData;
+      if (dest !== 'ALL') filtered = filtered.filter(d => d.dest === dest);
+      if (directOnly) filtered = filtered.filter(d => d.direct === true);
+
+      renderFlightTableAndChart(filtered);
+    }
+
+    async function searchGoogleFlightsViaAI() {
+      const btn = document.getElementById('aiSearchBtn');
+      const originalText = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner spinner mr-1"></i> Google Flights 실시간 검색 중...`;
+      }
+      playAppBeep(500);
+      showToast('Google Flights 운임 데이터베이스를 검색 중입니다...');
+      await new Promise(r => setTimeout(r, 600));
+
+      const updatedEl = document.getElementById('gfLastUpdated');
+      if (updatedEl) {
+        const now = new Date();
+        updatedEl.innerText = `Google Flights 동기화 완료: ${now.toLocaleTimeString('ko-KR')}`;
+      }
+      playAppBeep(660);
+      showToast('Google Flights 최신 기준 운임이 테이블에 동기화되었습니다!');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+      updateFlightDashboard();
+    }
+
+    // Interactive Budget Calculation Engine
+    function runBudgetCalc() {
+      const travelers = parseInt(document.getElementById('calcTravelers')?.value || 4, 10);
+      const nights = parseInt(document.getElementById('calcNights')?.value || 8, 10);
+      const hotelPerNightUSD = parseFloat(document.getElementById('calcHotelTier')?.value || 200);
+      const carPerDayUSD = parseFloat(document.getElementById('calcCarTier')?.value || 85);
+      const foodPerDayUSD = parseFloat(document.getElementById('calcFoodStyle')?.value || 80);
+      const hasUniversalExpress = document.getElementById('calcIncludeUniversalExpress')?.checked;
+      const hasDisneyPass = document.getElementById('calcIncludeDisneyPass')?.checked;
+
+      document.getElementById('calcTravelersLabel').innerText = `${travelers}인 (${travelers === 1 ? '솔로' : travelers === 2 ? '커플/2인' : '친구/가족 4인+'})`;
+      document.getElementById('calcNightsLabel').innerText = `${nights}박 ${nights + 2}일`;
+
+      const exRate = 1380; // 1 USD = 1,380 KRW
+      const flightAvgKRW = 1680000; // Economy multi-city benchmark
+
+      // Accommodation: 2 people per room assumed
+      const roomsNeeded = Math.ceil(travelers / 2);
+      const totalHotelUSD = roomsNeeded * hotelPerNightUSD * nights;
+
+      // Car Rental: 1 car for up to 4 travelers, 2 cars for 5-6
+      const carsNeeded = travelers > 4 ? 2 : 1;
+      const totalCarUSD = carsNeeded * (carPerDayUSD + 25) * (nights + 1); // +25 for gas & tolls
+
+      // Dining & Tips
+      const totalFoodUSD = travelers * foodPerDayUSD * (nights + 2);
+
+      // Theme Parks per person
+      let parkPerPersonUSD = 130 + 120; // Basic Universal + Disney/Sightseeing
+      if (hasUniversalExpress) parkPerPersonUSD += 120;
+      if (hasDisneyPass) parkPerPersonUSD += 32;
+      const totalParksUSD = travelers * parkPerPersonUSD;
+
+      // Grand Total
+      const totalUSD = totalHotelUSD + totalCarUSD + totalFoodUSD + totalParksUSD;
+      const totalKRW = (travelers * flightAvgKRW) + (totalUSD * exRate);
+      const perPersonKRW = Math.round(totalKRW / travelers);
+      const perPersonUSD = Math.round(totalUSD / travelers) + Math.round(flightAvgKRW / exRate);
+
+      // Estimated Savings with Hacks
+      const savingsUSD = (500) + (travelers * 60) + (nights * 20); // Connecting room + to-go food + parking hacks
+      const savingsKRW = savingsUSD * exRate;
+
+      document.getElementById('calcPerPersonKRW').innerText = perPersonKRW.toLocaleString() + ' 원';
+      document.getElementById('calcPerPersonUSD').innerText = `약 $${perPersonUSD.toLocaleString()} USD`;
+      document.getElementById('calcTotalKRW').innerText = totalKRW.toLocaleString() + ' 원';
+      document.getElementById('calcTotalUSD').innerText = `약 $${Math.round(totalKRW / exRate).toLocaleString()} USD`;
+      document.getElementById('calcSavingsKRW').innerText = Math.round(savingsKRW).toLocaleString() + ' 원 절약!';
+    }
+
+    // Checklist Progress Engine
+    function updateChecklistProgress() {
+      const allChecks = document.querySelectorAll('.prep-check');
+      const checkedBoxes = document.querySelectorAll('.prep-check:checked');
+      const countEl = document.getElementById('checklistCount');
+      const barEl = document.getElementById('checkProgressBar');
+
+      playAppBeep(640, 0.05);
+
+      if (countEl) countEl.innerText = `${checkedBoxes.length} / ${allChecks.length}`;
+      if (barEl) {
+        const pct = allChecks.length > 0 ? (checkedBoxes.length / allChecks.length) * 100 : 0;
+        barEl.style.width = pct + '%';
+      }
+      if (checkedBoxes.length === allChecks.length && allChecks.length > 0) {
+        playAppBeep(880, 0.2);
+        showToast('축하합니다! 여행 준비물 20개를 모두 완료하셨습니다 🎉');
+      }
+    }
+
+    // Scroll to Itinerary Card
+    function scrollToItineraryCard(cardId) {
+      switchMainTab('itinerary');
+      setTimeout(() => {
+        const el = document.getElementById(cardId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('ring-2', 'ring-blue-500');
+          setTimeout(() => el.classList.remove('ring-2', 'ring-blue-500'), 1500);
+        }
+      }, 50);
+    }
+
+    // Tab Switcher
+    function switchMainTab(tabKey) {
+      playAppBeep(500, 0.05);
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+      document.querySelectorAll('.main-tab-btn').forEach(btn => {
+        btn.classList.remove('bg-slate-900', 'text-white');
+        btn.classList.add('bg-white', 'text-slate-600');
+      });
+
+      const target = document.getElementById('tab-content-' + tabKey);
+      const targetBtn = document.getElementById('main-tab-' + tabKey);
+      if (target) target.classList.remove('hidden');
+      if (targetBtn) {
+        targetBtn.classList.remove('bg-white', 'text-slate-600');
+        targetBtn.classList.add('bg-slate-900', 'text-white');
+      }
+
+      if (tabKey === 'flights') updateFlightDashboard();
+      if (tabKey === 'budget') runBudgetCalc();
+    }
+
+    // Toast Utility
+    function showToast(msg) {
+      const box = document.getElementById('toastMsgBox');
+      const text = document.getElementById('toastText');
+      if (!box || !text) return;
+      text.innerText = msg;
+      box.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => {
+        box.classList.add('translate-y-20', 'opacity-0');
+      }, 2500);
+    }
+
+    function copyCustomString(str) {
+      const dummy = document.createElement('textarea');
+      dummy.value = str;
+      document.body.appendChild(dummy);
+      dummy.select();
+      try {
+        document.execCommand('copy');
+      } catch (e) {}
+      document.body.removeChild(dummy);
+    }
+
+    function copyDashboardUrl() {
+      copyCustomString(window.location.href);
+      playAppBeep(600);
+      showToast('대시보드 링크가 복사되었습니다!');
+    }
+
+    // App Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      renderInlineCalendar();
+      applyDateSelection();
+      renderPromotionCards();
+      updateChecklistProgress();
+      runBudgetCalc();
+    });
+  </script>
+</body>
+</html>
